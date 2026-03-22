@@ -20,6 +20,15 @@ async def lifespan(app: FastAPI):
     """Startup / Shutdown lifecycle."""
     # ── Startup ───────────────────────────────
     await init_db()
+    
+    # Run the seed script automatically on startup for Render free tier
+    try:
+        import seed_all
+        await seed_all.seed_everything()
+        print("✅  Successfully injected all data at startup!")
+    except Exception as e:
+        print("⚠️  Seeding error:", e)
+
     print(f"✅  {settings.APP_NAME} v{settings.APP_VERSION} started")
     yield
     # ── Shutdown ──────────────────────────────

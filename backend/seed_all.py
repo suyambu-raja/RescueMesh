@@ -133,4 +133,5 @@ async def seed_everything():
             print('Error saving:', e)
             await session.rollback()
 
-asyncio.run(seed_everything())
+if __name__ == '__main__':
+    asyncio.run(seed_everything())
