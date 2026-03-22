@@ -45,13 +45,15 @@ def run():
     output += "from app.models import User, DangerZone, Message, FoodRequest, SOSAlert, ChatMessage, Contact, UserLocation, Shelter\n\n"
     output += "async def seed_everything():\n"
     output += "    async with async_session() as session:\n"
-    # Inject missing dummy users to prevent PostgreSQL Foreign Key Integrity Errors
     output += "        try:\n"
-    output += "            session.add(User(id='83e3943f-85cc-489d-a54b-585323c81778', full_name='Missing User 1', email='missing1@local', hashed_password='x'))\n"
-    output += "            session.add(User(id='Me (Offline)', full_name='Me (Offline)', email='offline@local', hashed_password='x'))\n"
-    output += "            session.add(User(id='e356a5a8-b812-443e-8ac2-7789d8af9f1f', full_name='Missing User 2', email='missing2@local', hashed_password='x'))\n"
-    output += "        except Exception:\n"
-    output += "            pass\n\n"
+    output += "            # Inject missing dummy users to prevent PostgreSQL Foreign Key Integrity Errors\n"
+    output += "            await session.merge(User(id='83e3943f-85cc-489d-a54b-585323c81778', full_name='Missing User 1', email='missing1@local', hashed_password='x'))\n"
+    output += "            await session.merge(User(id='Me (Offline)', full_name='Me (Offline)', email='offline@local', hashed_password='x'))\n"
+    output += "            await session.merge(User(id='e356a5a8-b812-443e-8ac2-7789d8af9f1f', full_name='Missing User 2', email='missing2@local', hashed_password='x'))\n"
+    output += "            await session.commit()\n"
+    output += "        except Exception as e:\n"
+    output += "            print('Warning: Dummy users error', e)\n"
+    output += "            await session.rollback()\n\n"
 
     for table, model_name in table_map.items():
         cursor.execute(f"PRAGMA table_info({table})")
@@ -67,6 +69,7 @@ def run():
             continue
             
         print(f"Exporting {len(rows)} rows from {table}...")
+        output += f"        print('Seeding {table}...')\n"
         
         for row in rows:
             kwargs = []
@@ -75,13 +78,18 @@ def run():
                     kwargs.append(f"{col}={process_val(col, val)}")
             
             kwargs_str = ", ".join(kwargs)
-            output += f"        session.add({model_name}({kwargs_str}))\n"
+            output += f"        try:\n"
+            output += f"            await session.merge({model_name}({kwargs_str}))\n"
+            output += f"            await session.commit()\n"
+            output += f"        except Exception as e:\n"
+            output += f"            await session.rollback()\n"
+            output += f"            print('Error on {table} row:', e)\n"
             
     output += "        try:\n"
     output += "            await session.commit()\n"
     output += "            print('Successfully copied all data to PostgreSQL!')\n"
     output += "        except Exception as e:\n"
-    output += "            print('Error saving:', e)\n"
+    output += "            print('Error updating final:', e)\n"
     output += "            await session.rollback()\n\n"
     output += "if __name__ == '__main__':\n"
     output += "    asyncio.run(seed_everything())\n"
