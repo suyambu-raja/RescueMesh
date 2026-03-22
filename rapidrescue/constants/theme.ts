@@ -1,0 +1,47 @@
+export const COLORS = {
+  background: '#001A24',
+  surface: '#00455E',
+  surfaceDeep: '#003145',
+  surfaceMid: '#004F6C',
+  primary: '#00B4D8',
+  primaryDark: '#0096C7',
+  textPrimary: '#F0F9FF',
+  textSecondary: 'rgba(240,249,255,0.6)',
+  textMuted: 'rgba(240,249,255,0.4)',
+  danger: '#ef4444',
+  dangerDark: '#c21515',
+  safe: '#22c55e',
+  safeDark: '#16a34a',
+  border: 'rgba(255,255,255,0.05)',
+  borderPrimary: 'rgba(0,180,216,0.3)',
+};
+
+export const LANGUAGES = [
+  { code: 'EN', name: 'English' },
+  { code: 'TA', name: 'தமிழ் (Tamil)' },
+  { code: 'HI', name: 'हिन्दी (Hindi)' },
+  { code: 'TE', name: 'తెలుగు (Telugu)' },
+  { code: 'ML', name: 'മലയാളം (Malayalam)' },
+  { code: 'KN', name: 'ಕن್ನಡ (Kannada)' },
+  { code: 'MR', name: 'मराठी (Marathi)' },
+  { code: 'GU', name: 'ગુજরાતી (Gujarati)' },
+  { code: 'BN', name: 'বাংলা (Bengali)' },
+  { code: 'PA', name: 'ਪੰਜਾਬੀ (Punjabi)' },
+  { code: 'OR', name: 'ଓଡ଼ିଆ (Odia)' },
+  { code: 'AS', name: 'অসমীয়া (Assamese)' },
+  { code: 'UR', name: 'اردو (Urdu)' },
+];
+
+export const ASSETS = {
+  BG_FLOOD: require('../assets/flood.png'),
+  BG_QUAKE: require('../assets/quake.jpg'),
+  BG_LANDSLIDE: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=400',
+  BG_KIT: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&q=80&w=400',
+  MAP_BG: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=600',
+  BG_WAVE: 'https://images.unsplash.com/photo-1523730205978-59fd1b2965e3?auto=format&fit=crop&q=80&w=400',
+  AVATAR_MICHAEL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
+  AVATAR_GOV: 'https://images.unsplash.com/photo-1554284126-aa88f22d8b74?auto=format&fit=crop&q=80&w=100',
+  AVATAR_1: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100',
+  AVATAR_2: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=100',
+  AVATAR_3: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100',
+};
