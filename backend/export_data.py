@@ -45,6 +45,13 @@ def run():
     output += "from app.models import User, DangerZone, Message, FoodRequest, SOSAlert, ChatMessage, Contact, UserLocation, Shelter\n\n"
     output += "async def seed_everything():\n"
     output += "    async with async_session() as session:\n"
+    # Inject missing dummy users to prevent PostgreSQL Foreign Key Integrity Errors
+    output += "        try:\n"
+    output += "            session.add(User(id='83e3943f-85cc-489d-a54b-585323c81778', full_name='Missing User 1', email='missing1@local', hashed_password='x'))\n"
+    output += "            session.add(User(id='Me (Offline)', full_name='Me (Offline)', email='offline@local', hashed_password='x'))\n"
+    output += "            session.add(User(id='e356a5a8-b812-443e-8ac2-7789d8af9f1f', full_name='Missing User 2', email='missing2@local', hashed_password='x'))\n"
+    output += "        except Exception:\n"
+    output += "            pass\n\n"
 
     for table, model_name in table_map.items():
         cursor.execute(f"PRAGMA table_info({table})")

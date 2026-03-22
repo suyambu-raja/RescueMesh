@@ -5,6 +5,13 @@ from app.models import User, DangerZone, Message, FoodRequest, SOSAlert, ChatMes
 
 async def seed_everything():
     async with async_session() as session:
+        try:
+            session.add(User(id='83e3943f-85cc-489d-a54b-585323c81778', full_name='Missing User 1', email='missing1@local', hashed_password='x'))
+            session.add(User(id='Me (Offline)', full_name='Me (Offline)', email='offline@local', hashed_password='x'))
+            session.add(User(id='e356a5a8-b812-443e-8ac2-7789d8af9f1f', full_name='Missing User 2', email='missing2@local', hashed_password='x'))
+        except Exception:
+            pass
+
         session.add(User(id='02a5a546-0f32-468f-a678-9d83a895cc2c', full_name='Anonymous Rescuer', email='anonymous@rescue.local', hashed_password='$2b$12$anonymous.placeholder.hash.value.unused', is_active=True, created_at=datetime.strptime('2026-03-21 07:15:59', '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc), user_tag='U_ANON000'))
         session.add(User(id='c2c5b770-624e-4430-aae5-553183f9450d', full_name='suyambu ', email='asuyamburaja8@gmail.com', hashed_password='$2b$12$D984tO8fDnltiocVVhpwWuNYBFmSAIYpGH4M2ttamPmJWPthsFj.y', is_active=True, created_at=datetime.strptime('2026-03-21 07:47:16', '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc), user_tag='U_4LB8A5Y'))
         session.add(DangerZone(id='555d02a3-e34f-475b-b2bf-6395bc2ff833', title='Severe Flooding', description='Water level up to 4 ft', severity='high', danger_type='flood', latitude=13.05, longitude=80.25, radius_meters=1000.0, is_active=True, created_at=datetime.strptime('2026-03-21 05:00:00', '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc), updated_at=datetime.strptime('2026-03-21 05:00:00', '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)))
