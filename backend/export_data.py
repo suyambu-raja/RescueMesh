@@ -14,8 +14,8 @@ def process_val(col, val):
     # Strings and Dates
     s = str(val)
     if col in ('created_at', 'updated_at', 'resolved_at', 'timestamp'):
-        # Parse timestamp "2026-03-21 07:15:59.782989" into datetime string constructor for eval
-        return f"datetime.strptime('{s[:19]}', '%Y-%m-%d %H:%M:%S')"
+        # Parse timestamp "2026-03-21 07:15:59.782989" into timezone-aware datetime
+        return f"datetime.strptime('{s[:19]}', '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)"
         
     # Normal Strings
     s = s.replace(chr(39), chr(92)+chr(39)).replace(chr(34), chr(92)+chr(34))
@@ -40,7 +40,7 @@ def run():
     }
 
     output = "import asyncio\n"
-    output += "from datetime import datetime\n"
+    output += "from datetime import datetime, timezone\n"
     output += "from app.database import async_session\n"
     output += "from app.models import User, DangerZone, Message, FoodRequest, SOSAlert, ChatMessage, Contact, UserLocation, Shelter\n\n"
     output += "async def seed_everything():\n"
