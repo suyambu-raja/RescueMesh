@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // We'll use 10.0.2.2 for Android emulator by default, or localhost for web.
 import { Platform } from 'react-native';
 
-export const API_BASE_URL = 'http://192.168.0.3:8000/api';
+export const API_BASE_URL = 'https://rescuemesh.onrender.com/api';
 
 export const setToken = async (token: string) => {
   await AsyncStorage.setItem('auth_token', token);
