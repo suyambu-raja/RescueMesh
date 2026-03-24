@@ -35,7 +35,29 @@ def _user_tag():
     return 'U_' + ''.join(random.choices(chars, k=7))
 
 
-# ── User ─────────────────────────────────────────────────────────────────
+# ── Device User (Primary Identity — no login required) ───────────────────
+
+class DeviceUser(Base):
+    """
+    Device-first identity.  Created automatically on first app open.
+    Every user gets one — no email / password needed.
+    Cloud-synced immediately so ALL data lives on the server.
+    """
+    __tablename__ = "device_users"
+
+    user_id = Column(String(10), primary_key=True)          # U_XXXXXXX
+    display_name = Column(String(120), default="Rescuer")
+    device_info = Column(Text, nullable=True)               # optional device metadata
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+    last_seen = Column(DateTime(timezone=True), default=_utcnow)
+
+    # Optional login link
+    linked_user_id = Column(String, ForeignKey("users.id"), nullable=True)
+    linked_user = relationship("User", backref="device_users")
+
+
+# ── User (Secondary — login credentials linked to DeviceUser) ────────────
 
 class User(Base):
     __tablename__ = "users"
@@ -109,6 +131,7 @@ class DangerZone(Base):
     image_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True)
     reported_by = Column(String, ForeignKey("users.id"), nullable=True)
+    reporter_tag = Column(String(10), nullable=True) # Device identity tag
     created_at = Column(DateTime(timezone=True), default=_utcnow)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 

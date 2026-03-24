@@ -32,6 +32,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   const syncOfflineData = async () => {
     try {
+      // Use the new sync queue service
+      const { flushQueue } = require('../services/syncQueue');
+      const synced = await flushQueue();
+      if (synced > 0) {
+        Alert.alert("Data Synced", `Successfully synced ${synced} items from local storage to the server.`);
+      }
+
+      // Also flush legacy offline_queue if present
       const existing = await AsyncStorage.getItem('offline_queue');
       if (existing) {
         const queue = JSON.parse(existing);
@@ -46,7 +54,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
         }
         await AsyncStorage.removeItem('offline_queue');
         if (count > 0) {
-          Alert.alert("Data Synced", `Successfully synced ${count} items from local storage to the server.`);
+          Alert.alert("Legacy Data Synced", `Synced ${count} legacy items.`);
         }
       }
     } catch (e) {
@@ -61,7 +69,13 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     setLoading(true);
     try {
       if (isSignUp) {
-        const res = await apiCall('/auth/register', 'POST', { full_name: fullName, email, password, user_tag: userId });
+        // Use identity/link to attach credentials to existing device user_id
+        const res = await apiCall('/identity/link', 'POST', {
+          user_id: userId,
+          full_name: fullName,
+          email,
+          password,
+        });
         if (res.status === 'success') {
           await setToken(res.data.access_token);
           storeSetName(res.data.user.full_name);
@@ -228,7 +242,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           </TouchableOpacity>
 
           <Text style={styles.guestNote}>
-            Guest data is saved locally to your device storage.
+            Your data is automatically synced to the cloud. Login is optional.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>

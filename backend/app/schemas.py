@@ -8,6 +8,45 @@ from datetime import datetime
 from enum import Enum
 
 
+# ── Device Identity (Primary — no login required) ────────────────────────
+
+class DeviceUserRegister(BaseModel):
+    user_id: str = Field(..., min_length=3, max_length=10)
+    display_name: str = Field(default="Rescuer", max_length=120)
+    device_info: Optional[str] = None
+
+
+class DeviceUserResponse(BaseModel):
+    user_id: str
+    display_name: str
+    is_active: bool
+    created_at: datetime
+    last_seen: datetime
+    linked_user_id: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class LinkLoginRequest(BaseModel):
+    """Link email/password credentials to an existing device user_id."""
+    user_id: str = Field(..., min_length=3, max_length=10)
+    full_name: str = Field(..., min_length=1, max_length=120)
+    email: str = Field(..., min_length=5, max_length=255)
+    password: str = Field(..., min_length=6)
+
+
+class SyncQueueItem(BaseModel):
+    """A single queued action from offline mode."""
+    endpoint: str
+    method: str = "POST"
+    payload: dict
+
+
+class SyncQueueRequest(BaseModel):
+    user_id: str
+    items: List[SyncQueueItem]
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────
 
 class Token(BaseModel):
@@ -142,6 +181,7 @@ class DangerZoneResponse(BaseModel):
     image_url: Optional[str]
     is_active: bool
     reported_by: Optional[str]
+    reporter_tag: Optional[str]
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -10,7 +10,7 @@ from typing import Optional
 from app.database import get_db
 from app.models import Message, User
 from app.schemas import MessageCreate, MessageResponse
-from app.auth import get_current_user, get_current_user_optional
+from app.auth import get_current_user, get_current_user_optional, get_device_or_auth_user
 
 router = APIRouter(prefix="/api/messages", tags=["Messages"])
 
@@ -19,34 +19,29 @@ router = APIRouter(prefix="/api/messages", tags=["Messages"])
 async def list_messages(
     message_type: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    identity: dict = Depends(get_device_or_auth_user),
 ):
     query = select(Message)
-    
-    # Unauthenticated user: only public/broadcast
-    if not current_user:
-        if message_type and message_type != "public":
-            return {"status": "success", "data": []}
-        query = query.where(
-            or_(
-                Message.is_broadcast == True,
-                Message.message_type == "public",
-            )
-        )
+    user_id = identity["user_id"]
+    db_user_id = identity.get("db_user_id")
+
+    if message_type:
+        query = query.where(Message.message_type == message_type)
     else:
-        # Authenticated user
-        if message_type:
-            query = query.where(Message.message_type == message_type)
-        else:
-            query = query.where(
-                or_(
-                    Message.sender_id == current_user.id,
-                    Message.recipient_id == current_user.id,
-                    Message.is_broadcast == True,
-                    Message.message_type == "public",
-                )
-            )
-    
+        # Show messages relevant to this user (by tag or db id)
+        conditions = [
+            Message.is_broadcast == True,
+            Message.message_type == "public",
+            Message.sender_tag == user_id,
+            Message.recipient_tag == user_id,
+        ]
+        if db_user_id:
+            conditions.extend([
+                Message.sender_id == db_user_id,
+                Message.recipient_id == db_user_id,
+            ])
+        query = query.where(or_(*conditions))
+
     result = await db.execute(query.order_by(Message.created_at.desc()))
     msgs = [MessageResponse.model_validate(m).model_dump() for m in result.scalars().all()]
     return {"status": "success", "data": msgs}
@@ -56,12 +51,17 @@ async def list_messages(
 async def send_message(
     data: MessageCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    identity: dict = Depends(get_device_or_auth_user),
 ):
+    # Use db_user_id if authenticated, fall back to user_id tag
+    sender_id = identity.get("db_user_id") or identity["user_id"]
+    sender_name = identity["display_name"]
+    sender_tag = identity["user_id"]
+
     # Resolve recipient by user_tag if provided
     recipient_id = data.recipient_id
     recipient_tag = data.recipient_tag
-    
+
     if recipient_tag and not recipient_id:
         result = await db.execute(select(User).where(User.user_tag == recipient_tag))
         recipient = result.scalar_one_or_none()
@@ -69,9 +69,9 @@ async def send_message(
             recipient_id = recipient.id
 
     msg = Message(
-        sender_id=current_user.id,
-        sender_name=current_user.full_name,
-        sender_tag=current_user.user_tag,
+        sender_id=sender_id,
+        sender_name=sender_name,
+        sender_tag=sender_tag,
         recipient_id=recipient_id,
         recipient_tag=recipient_tag,
         content=data.content,

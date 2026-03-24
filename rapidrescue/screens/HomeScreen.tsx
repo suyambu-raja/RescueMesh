@@ -76,6 +76,7 @@ export default function HomeScreen({ navigation }: HomeScreenProps) {
           }
         }
         
+        // Show newest items at the top
         setAlerts(uniqueAlerts);
         setLoading(false);
       }

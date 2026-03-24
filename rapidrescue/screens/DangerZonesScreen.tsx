@@ -111,14 +111,13 @@ export default function DangerZonesScreen({ navigation }: DangerZonesScreenProps
         image_url: imageUri || null
       };
       
-      if (isLoggedIn) {
-        const res = await apiCall('/zones/', 'POST', payload);
-        if (res.status === 'success') {
-          navigation.goBack();
+      const res = await apiCall('/zones/', 'POST', payload);
+      if (res.status === 'success') {
+        if (res._queued) {
+          Alert.alert("Cached for Sync", "You are currently offline. Your report is securely queued and will be shared automatically once connection is restored.");
+        } else {
+          Alert.alert("Success", "Danger zone report has been shared with the network.");
         }
-      } else {
-        await queueAction('/zones/', payload);
-        Alert.alert("Saved Locally", "You are fully offline. Your report block is saved encrypted locally and will dispatch precisely when connected.");
         navigation.goBack();
       }
     } catch (err: any) {
@@ -261,7 +260,12 @@ export default function DangerZonesScreen({ navigation }: DangerZonesScreenProps
                 let name = 'Selected Zone';
                 try {
                   let geo = await Location.reverseGeocodeAsync({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
-                  if (geo.length > 0) name = [geo[0].name, geo[0].street, geo[0].city].filter(Boolean).join(', ') || name;
+                  if (geo.length > 0) {
+                     const g = geo[0];
+                     const parts = [g.name, g.street, g.district, g.subregion, g.city].filter(Boolean);
+                     // Remove duplicates like 'Chromepet, Chromepet'
+                     name = parts.filter((v, i, a) => a.indexOf(v) === i).join(', ') || name;
+                  }
                 } catch (e) {}
                 setCoords({ lat: mapRegion.latitude, lon: mapRegion.longitude });
                 setLocationName(name);

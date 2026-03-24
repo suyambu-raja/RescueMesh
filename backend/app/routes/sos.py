@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import SOSAlert, User
 from app.schemas import SOSAlertCreate, SOSAlertResponse, SOSStatusEnum
-from app.auth import get_current_user, get_current_user_optional, hash_password
+from app.auth import get_current_user, get_current_user_optional, get_device_or_auth_user, hash_password
 from typing import Optional
 
 router = APIRouter(prefix="/api/sos", tags=["SOS Alerts"])
@@ -49,13 +49,16 @@ async def list_active_alerts(db: AsyncSession = Depends(get_db)):
 async def create_alert(
     data: SOSAlertCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    identity: dict = Depends(get_device_or_auth_user),
 ):
-    if not current_user:
-        current_user = await get_or_create_anon_user(db)
+    # Use the linked DB user_id if available, else anon user for FK
+    user_id = identity.get("db_user_id")
+    if not user_id:
+        anon = await get_or_create_anon_user(db)
+        user_id = anon.id
 
     alert = SOSAlert(
-        user_id=current_user.id,
+        user_id=user_id,
         latitude=data.latitude,
         longitude=data.longitude,
         battery_percentage=data.battery_percentage,

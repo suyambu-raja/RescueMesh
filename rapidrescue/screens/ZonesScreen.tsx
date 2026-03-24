@@ -8,53 +8,111 @@ import {
   Image,
   SafeAreaView,
   ActivityIndicator,
+  Linking,
+  Platform,
+  Alert,
 } from 'react-native';
-import { AlertTriangle, ChevronRight, Target, ChevronDown, MapPin } from 'lucide-react-native';
+import { AlertTriangle, ChevronRight, Target, ChevronDown, MapPin, Trash2 } from 'lucide-react-native';
 import { COLORS, ASSETS } from '../constants/theme';
 import { apiCall } from '../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppStore } from '../store/appStore';
 
 interface ZonesScreenProps {
   navigation: any;
 }
 
 export default function ZonesScreen({ navigation }: ZonesScreenProps) {
+  const { userId } = useAppStore();
   const [zones, setZones] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchZones = async () => {
-      setLoading(true);
-      let fetchedFromApi: any[] = [];
+  const fetchZones = async () => {
+    setLoading(true);
+    let fetchedFromApi: any[] = [];
+    try {
+      const res = await apiCall('/zones/');
+      if (res.status === 'success') fetchedFromApi = res.data;
+    } catch (err: any) {
+      console.warn("API Error, checking local Zones queue:", err.message);
+    } finally {
       try {
-        const res = await apiCall('/zones/');
-        if (res.status === 'success') fetchedFromApi = res.data;
-      } catch (err: any) {
-        console.warn("API Error, checking local Zones queue:", err.message);
-      } finally {
-        try {
-          const existing = await AsyncStorage.getItem('offline_queue');
-          if (existing) {
-            const queue = JSON.parse(existing);
-            const localZones = queue
-              .filter((q: any) => q.endpoint === '/zones/')
-              .map((q: any) => ({
-                id: 'local-' + Math.random(),
-                ...q.payload
-              }));
-            fetchedFromApi = [...localZones.reverse(), ...fetchedFromApi];
-          }
-        } catch(e) {}
-        setZones(fetchedFromApi);
-        setLoading(false);
-      }
-    };
+        // Check New Unified Sync Queue
+        const newQueueRaw = await AsyncStorage.getItem('rescue_sync_queue');
+        const oldQueueRaw = await AsyncStorage.getItem('offline_queue');
+        
+        let unifiedQueue: any[] = [];
+        if (newQueueRaw) unifiedQueue = [...unifiedQueue, ...JSON.parse(newQueueRaw)];
+        if (oldQueueRaw) unifiedQueue = [...unifiedQueue, ...JSON.parse(oldQueueRaw)];
+
+        if (unifiedQueue.length > 0) {
+          const localZones = unifiedQueue
+            .filter((q: any) => q.endpoint === '/zones/')
+            .map((q: any) => ({
+              id: q.id || 'local-' + Math.random(),
+              is_local: true,
+              ...(q.payload || q) // q.payload for new queue, q for legacy
+            }));
+          fetchedFromApi = [...localZones.reverse(), ...fetchedFromApi];
+        }
+      } catch(e) {}
+      setZones(fetchedFromApi);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       fetchZones();
     });
     fetchZones();
     return unsubscribe;
   }, [navigation]);
+
+  const handleDelete = async (zoneId: string) => {
+    Alert.alert(
+      "Confirm Deletion",
+      "Are you sure you want to remove this danger zone report?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              const res = await apiCall(`/zones/${zoneId}`, 'DELETE');
+              if (res.status === 'success') {
+                Alert.alert("Success", "Danger zone report deleted.");
+                fetchZones();
+              }
+            } catch (err: any) {
+              Alert.alert("Delete Failed", err.message);
+            }
+          } 
+        }
+      ]
+    );
+  };
+
+  const openLocationInMaps = async (lat: number, lon: number) => {
+    const url = Platform.select({
+      ios: `maps:0,0?q=${lat},${lon}&t=k`,
+      android: `geo:0,0?q=${lat},${lon}&z=19`,
+    });
+    
+    const fallbackUrl = `https://maps.google.com/?q=${lat},${lon}&t=k`;
+    
+    try {
+      const supported = url ? await Linking.canOpenURL(url) : false;
+      if (supported && url) {
+        await Linking.openURL(url);
+      } else {
+        await Linking.openURL(fallbackUrl);
+      }
+    } catch (e) {
+      await Linking.openURL(fallbackUrl);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -103,7 +161,14 @@ export default function ZonesScreen({ navigation }: ZonesScreenProps) {
                 resizeMode="cover"
               />
               <View style={styles.feedCardContent}>
-                 <Text style={styles.feedCardTitle}>{zone.title}</Text>
+                 <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                   <Text style={[styles.feedCardTitle, {flex: 1}]}>{zone.title}</Text>
+                   {(zone.reporter_tag === userId || zone.is_local) && (
+                     <TouchableOpacity onPress={() => handleDelete(zone.id)} style={styles.deleteBtn}>
+                       <Trash2 size={16} color={COLORS.danger} />
+                     </TouchableOpacity>
+                   )}
+                 </View>
                  <Text style={[styles.feedCardDesc, {marginTop: 2, marginBottom: 4, color: COLORS.textMuted, fontSize: 13}]} numberOfLines={1}>
                      {zone.location_name ? `📍 ${zone.location_name}` : `📍 GPS Bounds`}
                  </Text>
@@ -120,6 +185,10 @@ export default function ZonesScreen({ navigation }: ZonesScreenProps) {
                      <Text style={styles.feedCardTagText2}>{zone.danger_type?.toUpperCase()}</Text>
                    </View>
                  </View>
+                 <TouchableOpacity onPress={() => openLocationInMaps(zone.latitude, zone.longitude)} activeOpacity={0.7} style={styles.mapLinkRow}>
+                   <MapPin size={14} color={COLORS.primary} />
+                   <Text style={styles.mapLinkText}>Navigate to Danger Zone on Map</Text>
+                 </TouchableOpacity>
               </View>
             </View>
           ))}
@@ -234,5 +303,27 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.textPrimary,
+  },
+  mapLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,180,216,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  mapLinkText: {
+    fontWeight: '700',
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  deleteBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    borderRadius: 8,
+    marginLeft: 10,
   },
 });

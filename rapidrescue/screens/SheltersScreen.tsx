@@ -9,6 +9,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import {
   MapPin,
@@ -76,6 +78,26 @@ export default function SheltersScreen({ navigation }: SheltersScreenProps) {
     const direction = compass[Math.round(brng / 45) % 8];
 
     return { dist, direction };
+  };
+
+  const openLocationInMaps = async (lat: number, lon: number) => {
+    const url = Platform.select({
+      ios: `maps:0,0?q=${lat},${lon}&t=k`,
+      android: `geo:0,0?q=${lat},${lon}&z=19`,
+    });
+    
+    const fallbackUrl = `https://maps.google.com/?q=${lat},${lon}&t=k`;
+    
+    try {
+      const supported = url ? await Linking.canOpenURL(url) : false;
+      if (supported && url) {
+        await Linking.openURL(url);
+      } else {
+        await Linking.openURL(fallbackUrl);
+      }
+    } catch (e) {
+      await Linking.openURL(fallbackUrl);
+    }
   };
 
   const processShelters = (raw: any[], currentLat: number, currentLon: number) => {
@@ -255,6 +277,14 @@ export default function SheltersScreen({ navigation }: SheltersScreenProps) {
                   {isOffline && (
                     <Text style={styles.bearingText}>🧭 Head {shelter._direction}</Text>
                   )}
+                  <TouchableOpacity 
+                    onPress={() => openLocationInMaps(shelter.latitude, shelter.longitude)} 
+                    activeOpacity={0.7} 
+                    style={styles.mapLinkRow}
+                  >
+                    <MapPin size={12} color={COLORS.primary} />
+                    <Text style={styles.linkText}>View in Maps app</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
               <Navigation size={20} color={selectedShelter?.id === shelter.id ? COLORS.primary : COLORS.textMuted} />
@@ -331,4 +361,20 @@ const styles = StyleSheet.create({
   shelterDot: { fontSize: 13, color: COLORS.border, marginHorizontal: 6 },
   shelterBeds: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600' },
   bearingText: { color: COLORS.safe, fontSize: 12, marginTop: 4, fontWeight: '700' },
+  mapLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,180,216,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  linkText: {
+    fontWeight: '700',
+    fontSize: 11,
+    color: COLORS.primary,
+  },
 });

@@ -192,11 +192,20 @@ export default function App() {
         const res = await apiCall('/zones/');
         if (res.status === 'success') {
           const stored = await AsyncStorage.getItem('notified_zones');
-          const notified = stored ? JSON.parse(stored) : [];
+          
+          if (!stored) {
+            // First time running: silently cache all existing zones to prevent 'fake' notification spam
+            const allIds = res.data.map((z: any) => z.id);
+            await AsyncStorage.setItem('notified_zones', JSON.stringify(allIds));
+            return;
+          }
+
+          const notified = JSON.parse(stored);
           let updated = [...notified];
 
           for (const zone of res.data) {
             if (updated.includes(zone.id)) continue;
+            
             const dist = calculateDistance(loc.coords.latitude, loc.coords.longitude, zone.latitude, zone.longitude);
             if (dist <= 5) { // 5km radius
               await Notifications.scheduleNotificationAsync({

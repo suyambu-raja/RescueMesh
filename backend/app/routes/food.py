@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import FoodRequest, User
 from app.schemas import FoodRequestCreate, FoodRequestResponse
-from app.auth import get_current_user
+from app.auth import get_current_user, get_device_or_auth_user
 
 router = APIRouter(prefix="/api/food", tags=["Food Requests"])
 
@@ -32,10 +32,27 @@ async def list_food_requests(db: AsyncSession = Depends(get_db)):
 async def create_food_request(
     data: FoodRequestCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    identity: dict = Depends(get_device_or_auth_user),
 ):
+    user_id = identity.get("db_user_id")
+    if not user_id:
+        # Need a User record for FK — use or create anon
+        ANON_EMAIL = "anonymous@rescue.local"
+        result = await db.execute(select(User).where(User.email == ANON_EMAIL))
+        anon = result.scalar_one_or_none()
+        if not anon:
+            anon = User(
+                full_name="Anonymous Rescuer",
+                email=ANON_EMAIL,
+                hashed_password="$2b$12$anonymous.placeholder.hash.value.unused",
+                user_tag="U_ANON000",
+            )
+            db.add(anon)
+            await db.flush()
+        user_id = anon.id
+
     request = FoodRequest(
-        user_id=current_user.id,
+        user_id=user_id,
         num_people=data.num_people,
         food_type=data.food_type,
         urgency=data.urgency.value,
@@ -49,7 +66,7 @@ async def create_food_request(
     await db.commit()
     await db.refresh(request)
     resp = FoodRequestResponse.model_validate(request).model_dump()
-    resp["user_tag"] = current_user.user_tag
+    resp["user_tag"] = identity["user_id"]
     return {"status": "success", "data": resp}
 
 

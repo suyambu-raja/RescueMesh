@@ -10,7 +10,7 @@ from app.config import get_settings
 from app.database import init_db
 
 # Route imports
-from app.routes import auth, shelters, zones, messages, sos, location, food, contacts, chat
+from app.routes import auth, shelters, zones, messages, sos, location, food, contacts, chat, identity
 
 settings = get_settings()
 
@@ -63,6 +63,7 @@ app.add_middleware(
 )
 
 # ── Register Routers ─────────────────────────────────────────────────────
+app.include_router(identity.router)  # Device-first identity (must be before auth)
 app.include_router(auth.router)
 app.include_router(shelters.router)
 app.include_router(zones.router)

@@ -5,7 +5,7 @@
  * Currently uses internet connectivity check.
  * Future: will add mesh network (Bluetooth/Wi-Fi Direct) as a transport layer.
  */
-import { API_BASE_URL } from '../api';
+import { resolveApiUrl } from '../api';
 
 export type NetworkMode = 'online' | 'offline';
 
@@ -15,10 +15,11 @@ export type NetworkMode = 'online' | 'offline';
  */
 export async function checkNetworkMode(): Promise<NetworkMode> {
   try {
+    const baseUrl = await resolveApiUrl();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
-    const response = await fetch(`${API_BASE_URL}/sos/`, {
+    const response = await fetch(`${baseUrl}/sos/`, {
       method: 'GET',
       signal: controller.signal,
     });

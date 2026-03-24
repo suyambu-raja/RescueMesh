@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import UserLocation, User
 from app.schemas import LocationUpdate, LocationResponse
-from app.auth import get_current_user
+from app.auth import get_current_user, get_device_or_auth_user
 
 router = APIRouter(prefix="/api/location", tags=["Location"])
 
@@ -19,11 +19,15 @@ router = APIRouter(prefix="/api/location", tags=["Location"])
 async def update_location(
     data: LocationUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    identity: dict = Depends(get_device_or_auth_user),
 ):
     """Update/log the user's current location."""
+    user_id = identity.get("db_user_id")
+    if not user_id:
+        # Use the device user_id as a string — location table just needs an identifier
+        user_id = identity["user_id"]
     loc = UserLocation(
-        user_id=current_user.id,
+        user_id=user_id,
         latitude=data.latitude,
         longitude=data.longitude,
         accuracy=data.accuracy,
